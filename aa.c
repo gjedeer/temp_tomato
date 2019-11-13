@@ -2,6 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <assert.h>
+
 #define web_puts puts
 #define web_printf printf
 #define NI_MAXHOST 512
@@ -32,65 +39,40 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 	unsigned int i;
 	char host[NI_MAXHOST];
 	char ip[64], val[256];
-
-	/* Protection from memory overflow */
-	if (maxcount > 50) {
-	    maxcount = 50;
-	}
+	size_t filesize;
 
 	web_printf("\nwm_%s = [", name);
 
 	if (webmon) {
+		struct stat st;
+		int fd;
 		/* NASTEPNA LINIA POWINNA ZNOW WYGLADAC TAK: sprintf(val, "/proc/webmon_recent_%s", name); */
 		sprintf(val, "/home/gdr/Downloads/webmon_recent_%s", name);
-		if ((f = fopen(val, "r")) != NULL) {
-			comma = ' ';
-			i = 0;
 
-			/* Displaying all lines is a special case */
-			if (maxcount == 0) {
-			    char s[512];
-			    while ((!maxcount || i++ < maxcount) && fgets(s, sizeof(s), f)) {
-				    if (sscanf(s, "%lu\t%s\t%s", &time, ip, val) != 3) continue;
-				    jh = NULL;
-				    if (resolve) {
-					    if (resolve_addr(ip, host) == 0)
-						    jh = js_string(host);
-				    }
-				    js = utf8_to_js_string(val);
-				    web_printf("%c['%lu','%s','%s', '%s']", comma,
-					    time, ip, js ? : "", jh ? : "");
-				    free(js);
-				    free(jh);
-				    comma = ',';
-			    }
-			} else {
-			    /* Buffer up to maxcount lines in a circular buffer */
-			    char *buf = malloc(512 * maxcount);
-			    char *s;
-			    char ip[64], val[256];
-			    unsigned int buffer_ptr = 0;
-			    unsigned int total_lines = 0;
-			    unsigned int lines_to_read = 0;
+		stat(val, &st);
+		filesize = st.st_size;
 
-			    while(fgets(buf + 512 * buffer_ptr, 512, f)) {
-				buffer_ptr += 1;
-				total_lines += 1;
-				if(buffer_ptr >= maxcount) {
-				    buffer_ptr = 0;
-				}
-			    }
-			    
-			    /* Now print the remembered lines */
-			    lines_to_read = maxcount;
-			    if(total_lines < lines_to_read) {
-				lines_to_read = total_lines;
-			    }
-			    for (i = lines_to_read; i>0; i--) {
-				const unsigned int index = (buffer_ptr + i - 1) % maxcount;
-				char *s = buf + (index * 512);
+		fd = open(val, O_RDONLY, 0);
+		if (fd != -1) {
+		    void* mmappedData = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
+		    if (mmappedData != MAP_FAILED) {
+			char *data = (char*)mmappedData;
+			char *end = data + filesize;
+                        char *lineStart;
+			int lines_processed = 0;
 
-				if (sscanf(s, "%lu\t%s\t%s", &time, ip, val) != 3) continue;
+                        for(lineStart = end; lineStart >= data; lineStart--) {
+			    if(*lineStart == '\n' || *lineStart == '\r' || lineStart == data) {
+				const int length = end - lineStart;
+                                char *line = malloc(length + 1);
+				char *start = lineStart;
+
+				if(start == data) start++;
+				strncpy(line, start + 1, length);
+				line[length] = '\0';
+
+
+				if (sscanf(line, "%lu\t%s\t%s", &time, ip, val) != 3) continue;
 				jh = NULL;
 				if (resolve) {
 					if (resolve_addr(ip, host) == 0)
@@ -103,9 +85,19 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 				free(jh);
 				comma = ',';
 
+
+				free(line);
+				end = lineStart;
+
+				lines_processed++;
+
+				if(lines_processed >= maxcount) break;
 			    }
 			}
-			fclose(f);
+
+			munmap(mmappedData, filesize);
+		    }
+		    close(fd);
 		}
 	}
 
@@ -114,5 +106,5 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 
 
 int main(int argc, char *argv[]) {
-    webmon_list("domains", 1, 0, 20);
+    webmon_list("domains", 1, 0, 10);
 }
