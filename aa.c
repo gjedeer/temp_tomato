@@ -55,6 +55,7 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 		fd = open(val, O_RDONLY, 0);
 		if (fd != -1) {
 		    void* mmappedData = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
+		    comma = ' ';
 		    if (mmappedData != MAP_FAILED) {
 			char *data = (char*)mmappedData;
 			char *end = data + filesize;
@@ -67,8 +68,8 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
                                 char *line = malloc(length + 1);
 				char *start = lineStart;
 
-				if(start == data) start++;
-				strncpy(line, start + 1, length);
+				if(start > data) start += 1;
+				strncpy(line, start, length);
 				line[length] = '\0';
 
 
@@ -91,7 +92,7 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 
 				lines_processed++;
 
-				if(lines_processed >= maxcount) break;
+				if(maxcount > 0 && lines_processed >= maxcount) break;
 			    }
 			}
 
