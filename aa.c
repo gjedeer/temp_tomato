@@ -106,5 +106,5 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 
 
 int main(int argc, char *argv[]) {
-    webmon_list("domains", 1, 0, 10);
+    webmon_list("domains", 1, 0, 0);
 }
