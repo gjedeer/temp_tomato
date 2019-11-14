@@ -97,8 +97,12 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 			}
 
 			munmap(mmappedData, filesize);
+		    } else {
+			perror("Could not mmap");
 		    }
 		    close(fd);
+		} else {
+		    perror("Could not open file");
 		}
 	}
 
