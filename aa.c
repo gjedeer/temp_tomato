@@ -49,7 +49,9 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 		/* NASTEPNA LINIA POWINNA ZNOW WYGLADAC TAK: sprintf(val, "/proc/webmon_recent_%s", name); */
 		sprintf(val, "/home/gdr/Downloads/webmon_recent_%s", name);
 
-		stat(val, &st);
+		if(stat(val, &st) == -1) {
+			perror("Could not stat");
+		}
 		filesize = st.st_size;
 
 		fd = open(val, O_RDONLY, 0);
@@ -99,6 +101,7 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 			munmap(mmappedData, filesize);
 		    } else {
 			perror("Could not mmap");
+			printf("Tried to mmap file %s, %ld bytes", val, filesize);
 		    }
 		    close(fd);
 		} else {
