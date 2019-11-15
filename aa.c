@@ -22,6 +22,7 @@ char *js_string(char *val) {
     return return_value;
 }
 
+// based on https://stackoverflow.com/a/44894946
 /* Size of each input chunk to be read and allocate for. */
 #ifndef  READALL_CHUNK
 #define  READALL_CHUNK  262144
@@ -113,7 +114,6 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 	web_printf("\nwm_%s = [", name);
 	if (webmon) {
 		sprintf(s, "/proc/webmon_recent_%s", name);
-//		sprintf(s, "webmon_recent_%s", name);
 		if ((f = fopen(s, "r")) != NULL) {
 			int readall_ok;
 			char *data;
