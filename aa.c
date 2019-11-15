@@ -114,8 +114,7 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 	if (webmon) {
 		sprintf(s, "/proc/webmon_recent_%s", name);
 //		sprintf(s, "webmon_recent_%s", name);
-		f = fopen(s, "r");
-		if(f) {
+		if ((f = fopen(s, "r")) != NULL) {
 			int readall_ok;
 			char *data;
 			readall_ok = readall(f, &data, &filesize);
