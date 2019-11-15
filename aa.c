@@ -22,8 +22,7 @@ char *js_string(char *val) {
     return return_value;
 }
 
-/* Size of each input chunk to be
-   read and allocate for. */
+/* Size of each input chunk to be read and allocate for. */
 #ifndef  READALL_CHUNK
 #define  READALL_CHUNK  262144
 #endif
@@ -62,8 +61,7 @@ int readall(FILE *in, char **dataptr, size_t *sizeptr)
         if (used + READALL_CHUNK + 1 > size) {
             size = used + READALL_CHUNK + 1;
 
-            /* Overflow check. Some ANSI C compilers
-               may optimize this away, though. */
+            /* Overflow check. Some ANSI C compilers may optimize this away, though. */
             if (size <= used) {
                 free(data);
                 return READALL_TOOMUCH;
@@ -103,50 +101,36 @@ int readall(FILE *in, char **dataptr, size_t *sizeptr)
     return READALL_OK;
 }
 
-
 static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcount)
 {
 	FILE *f;
 	char *js, *jh;
 	char comma = ' ';
 	unsigned long time;
-	unsigned int i;
 	char host[NI_MAXHOST];
-	char ip[64], val[256];
+	char s[512], ip[64], val[256];
 	size_t filesize;
-	char *data;
-
 	web_printf("\nwm_%s = [", name);
-
 	if (webmon) {
-		/* NASTEPNA LINIA POWINNA ZNOW WYGLADAC TAK: sprintf(val, "/proc/webmon_recent_%s", name); */
-		sprintf(val, "/proc/webmon_recent_%s", name);
-//		sprintf(val, "/home/gdr/Downloads/webmon_recent_%s", name);
-//		sprintf(val, "/proc/vmstat");
-
-		f = fopen(val, "r");
-
+		sprintf(s, "/proc/webmon_recent_%s", name);
+//		sprintf(s, "webmon_recent_%s", name);
+		f = fopen(s, "r");
 		if(f) {
 			int readall_ok;
 			char *data;
-
 			readall_ok = readall(f, &data, &filesize);
 			if (readall_ok == READALL_OK) {
 				char *end = data + filesize;
 				char *lineStart;
 				int lines_processed = 0;
-
 				for(lineStart = end; lineStart >= data; lineStart--) {
 					if(*lineStart == '\n' || *lineStart == '\r' || lineStart == data) {
 						const int length = end - lineStart;
 						char *line = malloc(length + 1);
 						char *start = lineStart;
-
 						if(start > data) start += 1;
 						strncpy(line, start, length);
 						line[length] = '\0';
-
-
 						if (sscanf(line, "%lu\t%s\t%s", &time, ip, val) != 3) continue;
 						jh = NULL;
 						if (resolve) {
@@ -159,27 +143,22 @@ static void webmon_list(char *name, int webmon, int resolve, unsigned int maxcou
 						free(js);
 						free(jh);
 						comma = ',';
-
-
 						free(line);
 						end = lineStart;
-
 						lines_processed++;
-
 						if(maxcount > 0 && lines_processed >= maxcount) break;
 					}
 				}
-			} else {
-				printf("readall error %d", readall_ok);
+//			} else {
+//				printf("Readall error %d", readall_ok);
 			}
 			fclose(f);
 		}
 	}
-
 	web_puts("];\n");
 }
 
-
 int main(int argc, char *argv[]) {
-    webmon_list("domains", 1, 0, 0);
+    webmon_list("domains", 1, 0, 15);
+    return 0;
 }
